@@ -1,8 +1,26 @@
+from http import HTTPStatus
+
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 
-app = FastAPI()
+from fast_one.schemas import Message
+
+app = FastAPI(title='Minha Api')  # nome da minha api
 
 
-@app.get('/')
+@app.get('/', status_code=HTTPStatus.OK, response_model=Message)
 def read_root():
-    return {"message": "Hello World"}
+    return {'message': 'Hello World'}
+
+
+@app.get('/exercicio-html', response_class=HTMLResponse)
+def exercicio_aula_02():
+    return """
+    <html>
+      <head>
+        <title>Nosso olá mundo!</title>
+      </head>
+      <body>
+        <h1> Olá Mundo </h1>
+      </body>
+    </html>"""
