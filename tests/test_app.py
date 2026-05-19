@@ -34,6 +34,7 @@ def test_criar_usuario(client):
         'username': 'andrew',
     }
 
+
 def test_listar_usuarios(client):
     response = client.get('/users/')
 
@@ -47,3 +48,80 @@ def test_listar_usuarios(client):
             },
         ]
     }
+
+
+def test_get_user(client):
+    # Criar um usuário para poder recuperá-lo
+    client.post(
+        '/users/',
+        json={
+            'username': 'andrew',
+            'email': 'andrew@example.com',
+            'password': 'andrew13',
+        },
+    )
+
+    response = client.get('/users/1')
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'id': 1,
+        'email': 'andrew@example.com',
+        'username': 'andrew',
+    }
+
+
+def test_atualizar_usuario(client):
+    response = client.put(
+        '/user/1',
+        json={
+            'username': 'andrew_updated',
+            'email': 'andrew_updated@example.com',
+            'password': 'andrew13_updated',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'id': 1,
+        'email': 'andrew_updated@example.com',
+        'username': 'andrew_updated',
+    }
+
+
+def test_deletar_usuario(client):
+    response = client.delete('/user/1')
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'id': 1,
+        'email': 'andrew_updated@example.com',
+        'username': 'andrew_updated',
+    }
+
+
+def test_usuario_nao_encontrado(client):
+    response = client.put(
+        '/user/999',
+        json={
+            'username': 'digdim',
+            'email': 'digdim@exemple.com',
+            'password': 'digdim13',
+        },
+    )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'Nao achei'}
+
+
+def test_deletar_usuario_nao_encontrado(client):
+    response = client.delete('/user/999')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'Nao achei'}
+
+
+def test_listar_usuario_nao_encontrado(client):
+    response = client.get('/users/997')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'Nao achei'}
