@@ -3,7 +3,7 @@ name = "fast-one"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Andrew",email = "anjojusticeiroo@gmail.com"}
+    {name = "Andrew"}
 ]
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
