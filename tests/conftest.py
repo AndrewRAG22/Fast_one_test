@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from fast_one.app import app
 from fast_one.database import get_session
 from fast_one.models import User, table_registry
+from fast_one.security import get_password_hash
 
 
 @pytest.fixture
@@ -26,7 +27,7 @@ def client(session):
 
 @pytest.fixture
 def session():
-    # liga conexao com banco de dados em memoria
+    # Liga conexão com banco de dados em memória
     engine = create_engine(
         'sqlite:///:memory:',
         connect_args={'check_same_thread': False},
@@ -34,11 +35,16 @@ def session():
     )
 
     table_registry.metadata.create_all(engine)
-    # cria uma sessão com o banco de dados
+
+    # Cria uma sessão com o banco de dados
     with Session(engine) as session:
-        yield session
-    # fecha a conexão e apaga as tabelas
+        yield session  # O teste roda aqui
+
+    # Após o teste voltar do yield:
     table_registry.metadata.drop_all(engine)
+
+    # Fecha o engine e limpa o pool de conexões
+    engine.dispose()
 
 
 @contextmanager
@@ -64,12 +70,23 @@ def mock_db_time():
 
 @pytest.fixture
 def user(session):
+    password = 'testtest'
     user = User(
         username='Teste',
         email='teste@test.com',
-        password='testtest',
+        password=get_password_hash(password),
     )
     session.add(user)
     session.commit()
     session.refresh(user)
+    user.clean_password = password
     return user
+
+
+@pytest.fixture
+def token(client, user):
+    response = client.post(
+        '/token',
+        data={'username': user.email, 'password': user.clean_password},
+    )
+    return response.json()['access_token']
