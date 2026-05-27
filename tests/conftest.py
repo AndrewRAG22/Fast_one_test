@@ -11,6 +11,7 @@ from fast_one.app import app
 from fast_one.database import get_session
 from fast_one.models import User, table_registry
 from fast_one.security import get_password_hash
+from fast_one.settings import Settings
 
 
 @pytest.fixture
@@ -86,7 +87,12 @@ def user(session):
 @pytest.fixture
 def token(client, user):
     response = client.post(
-        '/token',
+        '/auth/token',
         data={'username': user.email, 'password': user.clean_password},
     )
     return response.json()['access_token']
+
+
+@pytest.fixture
+def settings():
+    return Settings()
