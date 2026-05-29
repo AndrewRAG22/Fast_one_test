@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast_one.database import get_session
 from fast_one.models import User
@@ -19,15 +20,16 @@ from fast_one.security import get_current_user, get_password_hash
 router = APIRouter(prefix='/users', tags=['users'])
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 @router.get('/{user_id}', response_model=UserPublic)
-def read_user(
+async def read_user(
     user_id: int,
-    session=Depends(get_session),
+    session: Session,
 ):
 
-    db_user = session.scalar(select(User).where(User.id == user_id))
+    db_user = await session.scalar(select(User).where(User.id == user_id))
     if not db_user:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail='Nao achei'
@@ -36,9 +38,9 @@ def read_user(
 
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-def create_user(user: UserSchema, session=Depends(get_session)):
+async def create_user(user: UserSchema, session: Session):
 
-    db_user = session.scalar(
+    db_user = await session.scalar(
         select(User).where(
             (User.username == user.username) | (User.email == user.email)
         )
@@ -60,20 +62,20 @@ def create_user(user: UserSchema, session=Depends(get_session)):
     )
 
     session.add(db_user)  # adiciona usuario ao banco de dados
-    session.commit()  # salva as alteracoes no banco de dados
-    session.refresh(db_user)  # atualiza o objeto db_user
+    await session.commit()  # salva as alteracoes no banco de dados
+    await session.refresh(db_user)  # atualiza o objeto db_user
 
     return db_user
 
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=UserList)
-def read_users(
+async def read_users(
     current_user: CurrentUser,
     Filter_users: Annotated[FilterPage, Query()],
-    session=Depends(get_session),
+    session: Session,
 ):
 
-    users = session.scalars(
+    users = await session.scalars(
         select(User).limit(Filter_users.limit).offset(Filter_users.offset)
     )
 
@@ -81,14 +83,14 @@ def read_users(
 
 
 @router.put('/{user_id}', status_code=HTTPStatus.OK, response_model=UserPublic)
-def update_user(
+async def update_user(
     user: UserSchema,
     user_id: int,
     current_user: CurrentUser,
-    session=Depends(get_session),
+    session: Session,
 ):
     # apenas para rodar o teste de usuario nao encontrado
-    db_user = session.scalar(select(User).where(User.id == user_id))
+    db_user = await session.scalar(select(User).where(User.id == user_id))
     if not db_user:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail='Nao achei'
@@ -103,8 +105,8 @@ def update_user(
         current_user.username = user.username
         current_user.password = get_password_hash(user.password)
         current_user.email = user.email
-        session.commit()
-        session.refresh(current_user)
+        await session.commit()
+        await session.refresh(current_user)
 
         return current_user
 
@@ -116,13 +118,13 @@ def update_user(
 
 
 @router.delete('/{user_id}', status_code=HTTPStatus.OK, response_model=Message)
-def delete_user(
+async def delete_user(
     user_id: int,
     current_user: CurrentUser,
-    session=Depends(get_session),
+    session: Session,
 ):
     # apenas para rodar o teste de usuario nao encontrado
-    db_user = session.scalar(select(User).where(User.id == user_id))
+    db_user = await session.scalar(select(User).where(User.id == user_id))
     if not db_user:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail='Nao achei'
@@ -134,6 +136,6 @@ def delete_user(
             status_code=HTTPStatus.FORBIDDEN, detail='Not enough permissions'
         )
 
-    session.delete(current_user)
-    session.commit()
+    await session.delete(current_user)
+    await session.commit()
     return {'message': 'Usuario deletado'}
